@@ -1,0 +1,50 @@
+swagger: '2.0'
+info:
+  version: 'first version'
+  title: Lambda Laboratory Server
+  
+paths:
+  /device/u2f_register:
+    post:
+      x-swagger-router-controller: routing
+      operationId: u2f_register
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: "#/definitions/CommonRequest"
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/CommonResponse"
+
+  /device/u2f_authenticate:
+    post:
+      x-swagger-router-controller: routing
+      operationId: u2f_authenticate
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: "#/definitions/CommonRequest"
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/CommonResponse"
+
+  /device/u2f_version:
+    post:
+      x-swagger-router-controller: routing
+      operationId: u2f_version
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: "#/definitions/CommonRequest"
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/CommonResponse"

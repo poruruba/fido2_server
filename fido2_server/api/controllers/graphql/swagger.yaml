@@ -1,0 +1,15 @@
+swagger: '2.0'
+info:
+  version: 'first version'
+  title: Lambda Laboratory Server
+  
+paths:
+  /graphql:
+    get:
+      produces:
+        - text/html
+      responses:
+        200:
+          description: Success
+          schema:
+            type: string
