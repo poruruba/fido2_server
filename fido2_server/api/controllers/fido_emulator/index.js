@@ -208,7 +208,7 @@ async function u2f_authenticate(control, challenge, application, keyHandle){
 
   // 署名回数カウンタのインクリメント
   cert.counter++;
-  cert.latauthed_at = new Date().getTime();
+  cert.lastauthed_at = new Date().getTime();
   await writeCertFile(key_id, cert);
   console.log('counter=' + cert.counter);
   var counter = Buffer.from([(cert.counter >> 24) & 0xff, (cert.counter >> 16) & 0xff, (cert.counter >> 8) & 0xff, cert.counter & 0xff ])
