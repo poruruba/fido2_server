@@ -104,6 +104,10 @@ async function u2f_register(challenge, application){
   var keyHandle = Buffer.concat([uuid] );
   var keyLength = Buffer.from([keyHandle.length]);
 
+  //サブジェクトキー識別子
+  const ski = rs.KJUR.crypto.Util.hashHex(kp.pubKeyObj.pubKeyHex, 'sha1');
+  const derSKI = new rs.KJUR.asn1.DEROctetString({ hex: ski });
+  
   // X.509証明書の作成
   var cert = new rs.KJUR.asn1.x509.Certificate({
     version: 3,
@@ -114,26 +118,22 @@ async function u2f_register(challenge, application){
     subject: { str: "/CN=" + FIDO_SUBJECT },
     sbjpubkey: kp.pubKeyObj, // can specify public key object or PEM string
     sigalg: "SHA256withECDSA",
+    ext: [
+      {
+        //サブジェクトキー識別子
+        extname: "subjectKeyIdentifier",
+        kid: {
+          hex: derSKI.getEncodedHex()
+        }
+      },
+      {
+        // FIDO U2F certificate transports extension
+        extname: "1.3.6.1.4.1.45724.2.1.1",
+        extn: "03020640"
+      }
+    ],
     cakey: kp_cert
   });
-
-/*
-  //サブジェクトキー識別子
-  var extSKI = new rs.KJUR.asn1.x509.Extension();
-  extSKI.oid = '2.5.29.14';
-  const ski = rs.KJUR.crypto.Util.hashHex(kp_cert.pubKeyObj.pubKeyHex, 'sha1');
-  const derSKI = new rs.KJUR.asn1.DEROctetString({ hex: ski });
-  extSKI.getExtnValueHex = () => {return derSKI.getEncodedHex() };
-  tbsc.appendExtension(extSKI);
-*/
-
-  // FIDO U2F certificate transports extension
-/*
-  var extSKI2 = new rs.KJUR.asn1.x509.Extension();
-  extSKI2.oid = '1.3.6.1.4.1.45724.2.1.1';
-  extSKI2.getExtnValueHex = () => { return "03020640" };
-  tbsc.appendExtension(extSKI2);
-*/
 
   var attestationCert = Buffer.from(cert.getEncodedHex(), 'hex');
 
