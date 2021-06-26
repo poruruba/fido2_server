@@ -79,20 +79,21 @@
               <collapse-panel class="panel-default" v-bind:id="'x5c_' + index" v-bind:title="'attestationObject.attStmt.x5c[' + index + ']'" collapse="false">
                 <span slot="content">
                   <div class="panel-body">
-                    <label>version</label> {{item.version}}<br>
-                    <label>serial</label> {{item.serial.hex}}<br>
-                    <label>sigalg</label> {{item.sigalg}}<br>
-                    <label>issuer</label> {{item.issuer.str}}<br>
-                    <label>notbefore</label> {{item.notbefore}}<br>
-                    <label>notafter</label> {{item.notafter}}<br>
-                    <label>subject</label> {{item.subject.str}}<br>
-                    <label>sbjpubkey</label> <button class="btn btn-default btn-sm" v-on:click="x509_save(item.sbjpubkey)">Save</button>
-                    <textarea class="form-control" rows="3">{{item.sbjpubkey}}</textarea>
+                    <button class="btn btn-default btn-sm" v-on:click="x509_save(item.x509)">Save</button><br>
+                    <label>version</label> {{item.params.version}}<br>
+                    <label>serial</label> {{item.params.serial.hex}}<br>
+                    <label>sigalg</label> {{item.params.sigalg}}<br>
+                    <label>issuer</label> {{item.params.issuer.str}}<br>
+                    <label>notbefore</label> {{item.params.notbefore}}<br>
+                    <label>notafter</label> {{item.params.notafter}}<br>
+                    <label>subject</label> {{item.params.subject.str}}<br>
+                    <label>sbjpubkey</label> <button class="btn btn-default btn-sm" v-on:click="pubkey_save(item.params.sbjpubkey)">Save</button>
+                    <textarea class="form-control" rows="3">{{item.params.sbjpubkey}}</textarea>
                     <label>sighex</label>
-                    <textarea class="form-control" rows="2">{{item.sighex}}</textarea>
+                    <textarea class="form-control" rows="2">{{item.params.sighex}}</textarea>
                     <label>item.ext[]</label>
                     <ul>
-                      <li v-for="(item2, index2) in item.ext">{{JSON.stringify(item2)}}</li>
+                      <li v-for="(item2, index2) in item.params.ext">{{JSON.stringify(item2)}}</li>
                     </ul>
                   </div>
                 </span>
