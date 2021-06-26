@@ -14,7 +14,7 @@ const curveLength = Math.ceil(256 / 8);
 
 const FIDO_ISSUER = process.env.FIDO_ISSUER || 'FT FIDO 0200';
 const FIDO_SUBJECT = process.env.FIDO_SUBJECT || 'FT FIDO P2000000000000';
-const FIDO_EXPIRE = Number(process.env.FIDO_EXPIRE) || 365;
+const FIDO_EXPIRE = Number(process.env.FIDO_EXPIRE) || 3650;
 const FIDO_EXPIRE_START = process.env.FIDO_EXPIRE_START || '210620150000Z'; // 形式：YYMMDDHHMMSSZ (UTC時間)
 
 const FILE_BASE = process.env.THIS_BASE_PATH + '/data/fido2_device/';
