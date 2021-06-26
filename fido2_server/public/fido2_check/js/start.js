@@ -67,7 +67,7 @@ var vue_options = {
                         x509.readCertHex(this.ba2hex(this.attestationObject.attStmt.x5c[i]));
                         var x509params = x509.getParam();
                         console.log(x509params);
-                        this.x5c.push(x509params);
+                        this.x5c.push({ x509: x509, params: x509params });
                     }
 
                     this.registered = true;
@@ -78,14 +78,25 @@ var vue_options = {
                     alert(error);
                 });
         },
-        x509_save: function(text){
+        x509_save: function (x509) {
+            var blob = new Blob([new Uint8Array(this.hex2ba(x509.hex))], { type: "octet/stream" });
+            var url = window.URL.createObjectURL(blob);
+
+            var a = document.createElement("a");
+            a.href = url;
+            a.target = '_blank';
+            a.download = "x509.der";
+            a.click();
+            window.URL.revokeObjectURL(url);
+        },
+        pubkey_save: function (text) {
             var blob = new Blob([text], { type: "text/plan" });
             var url = window.URL.createObjectURL(blob);
 
             var a = document.createElement("a");
             a.href = url;
             a.target = '_blank';
-            a.download = "x5c.pem";
+            a.download = "pubkey.pem";
             a.click();
             window.URL.revokeObjectURL(url);
         }
