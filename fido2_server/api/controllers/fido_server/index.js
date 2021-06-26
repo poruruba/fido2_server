@@ -9,8 +9,8 @@ const { Fido2Lib } = require("fido2-lib");
 const fsp = require('fs').promises;
 
 const FIDO_RP_NAME = process.env.FIDO_RP_NAME || "Sample FIDO Host";
-const FIDO_ORIGIN = process.env.FIDO_ORIGIN || "https://【立ち上げたサーバのホスト名】";
 const FIDO_RP_ID = process.env.FIDO_RP_ID || "【立ち上げたサーバのホスト名】"; //ポート番号除く
+const FIDO_ORIGIN = process.env.FIDO_ORIGIN || "https://【立ち上げたサーバのホスト名】";
 
 const FILE_BASE = process.env.THIS_BASE_PATH + '/data/fido2_server/';
 
