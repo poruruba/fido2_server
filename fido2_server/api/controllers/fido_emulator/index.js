@@ -4,13 +4,10 @@ const HELPER_BASE = process.env.HELPER_BASE || '../../helpers/';
 const Response = require(HELPER_BASE + 'response');
 
 const rs = require('jsrsasign');
-const ECDSA = require('ecdsa-secp256r1')
 const crypto = require('crypto');
 const uuidv4 = require('uuid').v4;
 const fsp = require('fs').promises;
 const fs = require('fs');
-
-const curveLength = Math.ceil(256 / 8);
 
 const FIDO_ISSUER = process.env.FIDO_ISSUER || 'FT FIDO 0200';
 const FIDO_SUBJECT = process.env.FIDO_SUBJECT || 'FT FIDO P2000000000000';
@@ -23,7 +20,7 @@ const PRIV_FNAME = "privkey.pem";
 var kp_cert;
 var serial_no = 123456;
 
-(async () =>{
+(async () => {
   // X509証明書の楕円暗号公開鍵ペアの作成
   if (fs.existsSync(FILE_BASE + PRIV_FNAME)) {
     var pem = await fsp.readFile(FILE_BASE + PRIV_FNAME);
@@ -32,60 +29,53 @@ var serial_no = 123456;
     var kp = rs.KEYUTIL.generateKeypair('EC', 'secp256r1');
     kp_cert = kp.prvKeyObj;
     fsp.writeFile(FILE_BASE + PRIV_FNAME, rs.KEYUTIL.getPEM(kp_cert, "PKCS1PRV"));
-  }    
+  }
 })();
 
 exports.handler = async (event, context, callback) => {
-  if( event.path == "/device/u2f_register"){
+  if (event.path == "/device/u2f_register") {
     var body = JSON.parse(event.body);
     console.log(body);
-    
+
     var input = Buffer.from(body.input, 'hex');
     var result = await u2f_register(input.subarray(7, 7 + 32), input.subarray(7 + 32, 7 + 32 + 32));
-    
-    return new Response({
-      result: Buffer.concat([ result, Buffer.from([0x90, 0x00])]).toString('hex')
-    });
-  }else
-  if( event.path == "/device/u2f_authenticate"){
-    var body = JSON.parse(event.body);
-    console.log(body);
 
-    var input = Buffer.from(body.input, 'hex');
-    try{
-      var result = await u2f_authenticate(input[2], input.subarray(7, 7 + 32), input.subarray(7 + 32, 7 + 32 + 32), input.subarray(7 + 32 + 32 + 1, 7 + 32 + 32 + 1 + input[7 + 32 + 32]));
-    }catch(sw){
+    return new Response({
+      result: Buffer.concat([result, Buffer.from([0x90, 0x00])]).toString('hex')
+    });
+  } else
+    if (event.path == "/device/u2f_authenticate") {
+      var body = JSON.parse(event.body);
+      console.log(body);
+
+      var input = Buffer.from(body.input, 'hex');
+      try {
+        var result = await u2f_authenticate(input[2], input.subarray(7, 7 + 32), input.subarray(7 + 32, 7 + 32 + 32), input.subarray(7 + 32 + 32 + 1, 7 + 32 + 32 + 1 + input[7 + 32 + 32]));
+      } catch (sw) {
+        return new Response({
+          result: sw.toString('hex')
+        });
+      };
+
       return new Response({
-        result: sw.toString('hex')
+        result: Buffer.concat([result, Buffer.from([0x90, 0x00])]).toString('hex')
       });
-    };
-
-    return new Response({
-      result: Buffer.concat([ result, Buffer.from([0x90, 0x00])]).toString('hex')
-    });
-  }else
-  if( event.path == "/device/u2f_version"){
-    var result = await u2f_version();
-    return new Response({
-      result: Buffer.concat([ result, Buffer.from([0x90, 0x00])]).toString('hex')
-    });
-  }
+    } else
+      if (event.path == "/device/u2f_version") {
+        var result = await u2f_version();
+        return new Response({
+          result: Buffer.concat([result, Buffer.from([0x90, 0x00])]).toString('hex')
+        });
+      }
 };
 
-async function u2f_register(challenge, application){
+async function u2f_register(challenge, application) {
   console.log('application=', application.toString('hex'));
 
   // 楕円暗号公開鍵ペアの作成
   var kp = rs.KEYUTIL.generateKeypair('EC', 'secp256r1');
 
-  var pubkey = Buffer.from(kp.pubKeyObj.pubKeyHex, 'hex');
-  var privkey = Buffer.from(kp.prvKeyObj.prvKeyHex, 'hex');
-  var privateKey = new ECDSA({
-    d: privkey,
-    x: pubkey.slice(1, 1 + curveLength),
-    y: pubkey.slice(1 + curveLength)
-  });
-  var userPublicKey = pubkey;
+  var userPublicKey = Buffer.from(kp.pubKeyObj.pubKeyHex, 'hex');
 
   // 内部管理用のKeyIDの決定
   var uuid = Buffer.alloc(16);
@@ -95,24 +85,24 @@ async function u2f_register(challenge, application){
 
   await writeCertFile(key_id, {
     application: application.toString('hex'),
-    privkey: privkey.toString('hex'),
+    privkey: rs.KEYUTIL.getPEM(kp.prvKeyObj, "PKCS1PRV"),
     counter: 0,
     created_at: new Date().getTime()
   });
 
   // KeyHandleの作成
-  var keyHandle = Buffer.concat([uuid] );
+  var keyHandle = Buffer.concat([uuid]);
   var keyLength = Buffer.from([keyHandle.length]);
 
   //サブジェクトキー識別子
   const ski = rs.KJUR.crypto.Util.hashHex(kp.pubKeyObj.pubKeyHex, 'sha1');
   const derSKI = new rs.KJUR.asn1.DEROctetString({ hex: ski });
-  
+
   // X.509証明書の作成
   var cert = new rs.KJUR.asn1.x509.Certificate({
     version: 3,
     serial: { int: serial_no++ },
-    issuer: { str: "/CN=" + FIDO_ISSUER},
+    issuer: { str: "/CN=" + FIDO_ISSUER },
     notbefore: FIDO_EXPIRE_START,
     notafter: toUTCString(new Date(Date.now() + FIDO_EXPIRE * 24 * 60 * 60 * 1000)),
     subject: { str: "/CN=" + FIDO_SUBJECT },
@@ -134,6 +124,7 @@ async function u2f_register(challenge, application){
     ],
     cakey: kp_cert
   });
+  console.log(cert.getPEM());
 
   var attestationCert = Buffer.from(cert.getEncodedHex(), 'hex');
 
@@ -147,8 +138,8 @@ async function u2f_register(challenge, application){
   ]);
   const sign = crypto.createSign('RSA-SHA256');
   sign.update(input);
-  var signature = sign.sign(privateKey.toPEM());
-  
+  var signature = sign.sign(rs.KEYUTIL.getPEM(kp.prvKeyObj, "PKCS1PRV"));
+
   console.log('userPublicKey(' + userPublicKey.length + ')=' + userPublicKey.toString('hex'));
   console.log('keyHandle(' + keyHandle.length + ')=' + keyHandle.toString('hex'));
   console.log('attestationCert(' + attestationCert.length + ')=' + attestationCert.toString('hex'));
@@ -165,7 +156,7 @@ async function u2f_register(challenge, application){
   ]);
 }
 
-async function u2f_authenticate(control, challenge, application, keyHandle){
+async function u2f_authenticate(control, challenge, application, keyHandle) {
   console.log('control=', control);
   console.log('application=', application.toString('hex'));
 
@@ -173,72 +164,60 @@ async function u2f_authenticate(control, challenge, application, keyHandle){
 
   // 内部管理用のKeyIDの抽出
   var key_id = keyHandle.slice(0, 16).toString('hex');
-  if (!checkAlnum(key_id)){
+  console.log('key_id=' + key_id);
+  if (!checkAlnum(key_id)) {
     console.log('key_id invalid')
     throw Buffer.from([0x6a, 0x80]);
   }
-  
-  console.log('key_id=' + key_id);
+
   var cert = await readCertFile(key_id);
-  if( !cert ){
+  if (!cert) {
     console.log('key_id not found');
     throw Buffer.from([0x6a, 0x80]);
   }
 
-  if( cert.application.toLowerCase() != application.toString('hex').toLowerCase() ){
+  if (cert.application.toLowerCase() != application.toString('hex').toLowerCase()) {
     console.log('application mismatch');
     throw Buffer.from([0x6a, 0x80]);
   }
 
-  if( control == 0x07 ){
+  if (control == 0x07) {
     throw Buffer.from([0x69, 0x85]);
   }
-
-  // 楕円暗号公開鍵ペアの復元
-  var ecdh = crypto.createECDH('prime256v1');
-  ecdh.setPrivateKey(Buffer.from(cert.privkey, 'hex'));
-
-  var pubkey = ecdh.getPublicKey();
-  var privkey = ecdh.getPrivateKey();
-  var privateKey = new ECDSA({
-    d: privkey,
-    x: pubkey.slice(1, 1 + curveLength),
-    y: pubkey.slice(1 + curveLength)
-  })
 
   // 署名回数カウンタのインクリメント
   cert.counter++;
   cert.lastauthed_at = new Date().getTime();
   await writeCertFile(key_id, cert);
   console.log('counter=' + cert.counter);
-  var counter = Buffer.from([(cert.counter >> 24) & 0xff, (cert.counter >> 16) & 0xff, (cert.counter >> 8) & 0xff, cert.counter & 0xff ])
+  var counter = Buffer.from([(cert.counter >> 24) & 0xff, (cert.counter >> 16) & 0xff, (cert.counter >> 8) & 0xff, cert.counter & 0xff])
 
   // 署名生成
   var input = Buffer.concat([
-    application, 
+    application,
     userPresence,
     counter,
     challenge
   ]);
   const sign = crypto.createSign('RSA-SHA256');
   sign.update(input);
-  var signature = sign.sign(privateKey.toPEM());
+  var signature = sign.sign(cert.privkey);
 
   console.log('input(' + input.length + ')=' + input.toString('hex'));
   console.log('sigunature(' + signature.length + ')=' + signature.toString('hex'));
 
   // verify sample code
-/*
-  const verify = crypto.createVerify('RSA-SHA256')
-  verify.write(input)
-  verify.end();
-
-  var result =  verify.verify(
-    privateKey.asPublic().toPEM(),
-    signature
-  );
-  console.log('verify result=' + result);
-*/
+  /*
+    const verify = crypto.createVerify('RSA-SHA256')
+    verify.write(input)
+    verify.end();
+  
+    var result =  verify.verify(
+      privateKey.asPublic().toPEM(),
+      signature
+    );
+    console.log('verify result=' + result);
+  */
 
   // レスポンスの生成(concat)
   return Buffer.concat([
@@ -248,7 +227,7 @@ async function u2f_authenticate(control, challenge, application, keyHandle){
   ]);
 }
 
-async function u2f_version(){
+async function u2f_version() {
   var version = Buffer.from('U2F_V2');
   return Promise.resolve(version);
 }
@@ -277,10 +256,10 @@ function checkAlnum(str) {
 }
 
 async function readCertFile(uuid) {
-  try{
+  try {
     var file = await fsp.readFile(FILE_BASE + uuid + '.json', 'utf8');
     return JSON.parse(file);
-  }catch(error){
+  } catch (error) {
     console.log(error);
     return null;
   }
