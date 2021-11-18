@@ -62,12 +62,14 @@ var vue_options = {
                     this.clientData = JSON.parse(arrayBufferToStr(response.response.clientDataJSON));
                     this.attestationObject = CBOR.decode(response.response.attestationObject);
                     this.x5c = [];
-                    for (var i = 0; i < this.attestationObject.attStmt.x5c.length ; i++ ){
-                        var x509 = new X509();
-                        x509.readCertHex(this.ba2hex(this.attestationObject.attStmt.x5c[i]));
-                        var x509params = x509.getParam();
-                        console.log(x509params);
-                        this.x5c.push({ x509: x509, params: x509params });
+                    if( this.attestationObject.attStmt.x5c ){
+                        for (var i = 0; i < this.attestationObject.attStmt.x5c.length ; i++ ){
+                            var x509 = new X509();
+                            x509.readCertHex(this.ba2hex(this.attestationObject.attStmt.x5c[i]));
+                            var x509params = x509.getParam();
+                            console.log(x509params);
+                            this.x5c.push({ x509: x509, params: x509params });
+                        }
                     }
 
                     this.registered = true;
