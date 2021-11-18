@@ -39,8 +39,10 @@ const methods_bootstrap = {
         this.$watch(property, (v) => ctrl.setValue(v));
     },
     ba2hex: function(bytes, sep = '', pref = '') {
+        if( !bytes )
+            return "";
         if (bytes instanceof ArrayBuffer)
-        bytes = new Uint8Array(bytes);
+            bytes = new Uint8Array(bytes);
         if (bytes instanceof Uint8Array)
             bytes = Array.from(bytes);
 
