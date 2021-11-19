@@ -49,7 +49,9 @@
         
         <div v-if="attestation != null">
           <label>rp.name</label> {{attestation.rp.name}}<br>
+          <label>rp.id</label> {{attestation.rp.id}}<br>
           <label>user.displayName</label> {{attestation.user.displayName}}<br>
+          <label>user.name</label> {{attestation.user.name}}<br>
           <label>user.id</label> {{attestation_encode.user.id}}<br>
           <label>challenge</label> {{attestation_encode.challenge}}<br>
           <label>attestation</label> {{attestation.attestation}}<br>
