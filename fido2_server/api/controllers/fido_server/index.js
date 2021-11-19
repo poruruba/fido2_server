@@ -45,7 +45,7 @@ exports.handler = async (event, context, callback) => {
         allowCredentials.push({
           type: 'public-key',
           id: authr.credId,
-          transports: ['usb', 'nfc', 'ble']
+//          transports: ['usb', 'nfc', 'ble']
         })
     }
     authnOptions.allowCredentials = allowCredentials;
@@ -163,6 +163,11 @@ exports.handler = async (event, context, callback) => {
     var body = JSON.parse(event.body);
     console.log(body);
 
+    if( !context.req.session.challenge ){
+      console.log('session is not enabled');
+      thorow 'session is not enabled';
+    }
+    
     var attestationExpectations = {
         challenge: context.req.session.challenge,
         origin: FIDO_ORIGIN,
