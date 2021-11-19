@@ -165,7 +165,7 @@ exports.handler = async (event, context, callback) => {
 
     if( !context.req.session.challenge ){
       console.log('session is not enabled');
-      thorow 'session is not enabled';
+      throw 'session is not enabled';
     }
     
     var attestationExpectations = {
