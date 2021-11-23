@@ -94,7 +94,7 @@ exports.handler = async (event, context, callback) => {
       factor: "either",
       publicKey: attestation.publickey,
       prevCounter: attestation.counter,
-      userHandle: null
+      userHandle: user.id
     };
 
     body.rawId = new Uint8Array(base64url.toBuffer(body.rawId)).buffer;
