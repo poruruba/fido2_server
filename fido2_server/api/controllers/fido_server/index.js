@@ -49,6 +49,7 @@ exports.handler = async (event, context, callback) => {
         })
     }
     authnOptions.allowCredentials = allowCredentials;
+    authnOptions.userVerification = "preferred";
     console.log(authnOptions);
 
     context.req.session.challenge = authnOptions.challenge;
