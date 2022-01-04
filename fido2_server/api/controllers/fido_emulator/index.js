@@ -2,23 +2,24 @@
 
 const HELPER_BASE = process.env.HELPER_BASE || '../../helpers/';
 const Response = require(HELPER_BASE + 'response');
+const jsonfile = require(HELPER_BASE + 'jsonfile-utils');
 
 const rs = require('jsrsasign');
 const crypto = require('crypto');
-const uuidv4 = require('uuid').v4;
 const fsp = require('fs').promises;
 const fs = require('fs');
 
 const FIDO_ISSUER = process.env.FIDO_ISSUER || 'FT FIDO 0200';
-const FIDO_SUBJECT = process.env.FIDO_SUBJECT || 'FT FIDO P2000000000000';
+const FIDO_SUBJECT = process.env.FIDO_SUBJECT || 'FT FIDO P200';
 const FIDO_EXPIRE = Number(process.env.FIDO_EXPIRE) || 3650;
 const FIDO_EXPIRE_START = process.env.FIDO_EXPIRE_START || '210620150000Z'; // 形式：YYMMDDHHMMSSZ (UTC時間)
 
 const FILE_BASE = process.env.THIS_BASE_PATH + '/data/fido2_device/';
 const PRIV_FNAME = "privkey.pem";
+const STATE_FNAME = "state.json";
 
 var kp_cert;
-var serial_no = 123456;
+var sequence_no = 0;
 
 (async () => {
   // X509証明書の楕円暗号公開鍵ペアの作成
@@ -30,9 +31,24 @@ var serial_no = 123456;
     kp_cert = kp.prvKeyObj;
     fsp.writeFile(FILE_BASE + PRIV_FNAME, rs.KEYUTIL.getPEM(kp_cert, "PKCS1PRV"));
   }
+  
+  // シーケンス番号の復旧
+  var state = await jsonfile.read_json(FILE_BASE + STATE_FNAME, { sequence_no: 0 } );
+  sequence_no = state.sequence_no;
 })();
 
 exports.handler = async (event, context, callback) => {
+  if (event.path == "/device/u2f_certificate") {
+    var body = JSON.parse(event.body);
+    var result = await u2f_certificate(Buffer.from(body.pubkey, 'base64'));
+
+    return new Response({
+      result: {
+        cert: result.cert.toString('base64'),
+        sequence_no: result.sequence_no
+      }
+    });
+  }else
   if (event.path == "/device/u2f_register") {
     var body = JSON.parse(event.body);
     console.log(body);
@@ -50,7 +66,11 @@ exports.handler = async (event, context, callback) => {
 
       var input = Buffer.from(body.input, 'hex');
       try {
-        var result = await u2f_authenticate(input[2], input.subarray(7, 7 + 32), input.subarray(7 + 32, 7 + 32 + 32), input.subarray(7 + 32 + 32 + 1, 7 + 32 + 32 + 1 + input[7 + 32 + 32]));
+        var control = input[2];
+        var challenge = input.subarray(7, 7 + 32);
+        var application = input.subarray(7 + 32, 7 + 32 + 32);
+        var keyHandle = input.subarray(7 + 32 + 32 + 1, 7 + 32 + 32 + 1 + input[7 + 32 + 32]);
+        var result = await u2f_authenticate(control, challenge, application, keyHandle);
       } catch (sw) {
         return new Response({
           result: sw.toString('hex')
@@ -69,17 +89,70 @@ exports.handler = async (event, context, callback) => {
       }
 };
 
+async function u2f_certificate(pubKey) {
+  var pubKeyHex = pubKey.toString('hex');
+  var pubKeyObj = rs.KEYUTIL.getKey({
+    'xy': pubKeyHex,
+    'curve': 'secp256r1'
+  });
+
+  //サブジェクトキー識別子
+  const ski = rs.KJUR.crypto.Util.hashHex(pubKeyHex, 'sha1');
+  const derSKI = new rs.KJUR.asn1.DEROctetString({ hex: ski });
+
+  // X.509証明書の作成
+  sequence_no++;
+  var cert = new rs.KJUR.asn1.x509.Certificate({
+    version: 3,
+    serial: { int: sequence_no },
+    issuer: { str: "/CN=" + FIDO_ISSUER },
+    notbefore: FIDO_EXPIRE_START,
+    notafter: toUTCString(new Date(Date.now() + FIDO_EXPIRE * 24 * 60 * 60 * 1000)),
+    subject: { str: "/CN=" + FIDO_SUBJECT + ("0000000000" + sequence_no).slice(-10) },
+    sbjpubkey: pubKeyObj, // can specify public key object or PEM string
+    sigalg: "SHA256withECDSA",
+    ext: [
+      {
+        //サブジェクトキー識別子
+        extname: "subjectKeyIdentifier",
+        kid: {
+          hex: derSKI.getEncodedHex()
+        }
+      },
+      {
+        // FIDO U2F certificate transports extension
+        extname: "1.3.6.1.4.1.45724.2.1.1",
+        extn: "03020640"
+      }
+    ],
+    cakey: kp_cert
+  });
+  console.log(cert.getPEM());
+
+  await jsonfile.write_json(FILE_BASE + STATE_FNAME, { sequence_no: sequence_no });
+
+  return {
+    cert: Buffer.from(cert.getEncodedHex(), 'hex'),
+    sequence_no: sequence_no
+  }
+}
+
+
 async function u2f_register(challenge, application) {
   console.log('application=', application.toString('hex'));
 
   // 楕円暗号公開鍵ペアの作成
   var kp = rs.KEYUTIL.generateKeypair('EC', 'secp256r1');
-
+  console.log(kp.pubKeyObj.pubKeyHex);
   var userPublicKey = Buffer.from(kp.pubKeyObj.pubKeyHex, 'hex');
 
   // 内部管理用のKeyIDの決定
-  var uuid = Buffer.alloc(16);
-  uuidv4({}, uuid);
+  sequence_no++;
+  var uuid = crypto.randomBytes(16);
+  uuid[0] = (sequence_no >> 24) & 0xff;
+  uuid[1] = (sequence_no >> 16) & 0xff;
+  uuid[2] = (sequence_no >> 8) & 0xff;
+  uuid[3] = (sequence_no) & 0xff;
   var key_id = uuid.toString('hex');
   console.log('key_id=' + key_id);
 
@@ -101,11 +174,11 @@ async function u2f_register(challenge, application) {
   // X.509証明書の作成
   var cert = new rs.KJUR.asn1.x509.Certificate({
     version: 3,
-    serial: { int: serial_no++ },
+    serial: { int: sequence_no },
     issuer: { str: "/CN=" + FIDO_ISSUER },
     notbefore: FIDO_EXPIRE_START,
     notafter: toUTCString(new Date(Date.now() + FIDO_EXPIRE * 24 * 60 * 60 * 1000)),
-    subject: { str: "/CN=" + FIDO_SUBJECT },
+    subject: { str: "/CN=" + FIDO_SUBJECT + ("0000000000" + sequence_no).slice(-10) },
     sbjpubkey: kp.pubKeyObj, // can specify public key object or PEM string
     sigalg: "SHA256withECDSA",
     ext: [
