@@ -70,6 +70,7 @@ BLEAdvertising *g_pAdvertising = NULL;
 
 #define DEFAULT_KEY_SLOT  2
 #define DEFAULT_DATA_SLOT 8
+#define DEFAULT_COUNTER_SLOT 1
 #define PAYLOAD_BUFFER_LENGTH 1024
 uint8_t payload[PAYLOAD_BUFFER_LENGTH];
 #define APPLICATION_LENGTH  32
@@ -427,28 +428,11 @@ int process_authenticate(uint8_t control, const uint8_t *challenge, const uint8_
     return 2;
   }
 
-  byte data[4];
-  ret = ECCX08.readSlot(DEFAULT_DATA_SLOT, data, sizeof(data));
+  unsigned long counter;
+  ret = ECCX08.countUp(DEFAULT_COUNTER_SLOT, &counter);
   if( !ret ){
-    Serial.println("readSlot error");
-    payload[0] = 0x6a;
-    payload[1] = 0x80;
-    return 2;
-  }
-
-  unsigned long counter = (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3];
-  counter++;
-  data[0] = (counter << 24) & 0xff;
-  data[1] = (counter << 16) & 0xff;
-  data[2] = (counter << 8) & 0xff;
-  data[3] = (counter) & 0xff;
-
-  ret = ECCX08.writeSlot(DEFAULT_DATA_SLOT, data, sizeof(data));
-  if( !ret ){
-    Serial.println("writeSlot error");
-    payload[0] = 0x6a;
-    payload[1] = 0x80;
-    return 2;
+    Serial.println("ECCX08.readSlot Error");
+    while (1);
   }
   
   uint8_t userPresence = 0x01;
