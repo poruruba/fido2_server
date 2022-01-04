@@ -68,7 +68,8 @@ uint8_t value_appearance[2] = {0x40, 0x03};
 
 BLEAdvertising *g_pAdvertising = NULL;
 
-#define DEFAULT_SLOT  0
+#define DEFAULT_KEY_SLOT  2
+#define DEFAULT_DATA_SLOT 8
 #define PAYLOAD_BUFFER_LENGTH 1024
 uint8_t payload[PAYLOAD_BUFFER_LENGTH];
 #define APPLICATION_LENGTH  32
@@ -78,7 +79,6 @@ uint8_t payload[PAYLOAD_BUFFER_LENGTH];
 #define SERIAL_LENGTH       12
 #define PUBLICKEY_LENGTH    (1 + 64)
 #define KEYHANDLE_LENGTH  (4 + SERIAL_LENGTH)
-unsigned long counter = 0;
 
 long doHttpPost(String url, JsonDocument *p_input, JsonDocument *p_output);
 long auth_prepare(void);
@@ -311,7 +311,7 @@ int process_register(const uint8_t *challenge, const uint8_t *application)
 
   uint8_t publicKey[PUBLICKEY_LENGTH];
   publicKey[0] = 0x04;
-  ret = ECCX08.generatePublicKey(DEFAULT_SLOT, &publicKey[1]);
+  ret = ECCX08.generatePublicKey(DEFAULT_KEY_SLOT, &publicKey[1]);
   if( !ret ){
     Serial.println("ECCX08.generatePublicKey Error");
     payload[0] = 0x6a;
@@ -376,7 +376,7 @@ int process_register(const uint8_t *challenge, const uint8_t *application)
   }
 
   unsigned char signature[RAW_SIGNATURE_LENGTH];
-  ret = ECCX08.ecSign(DEFAULT_SLOT, hash, signature);
+  ret = ECCX08.ecSign(DEFAULT_KEY_SLOT, hash, signature);
   if( !ret ){
     Serial.println("ECCX08.ecSign Error");
     payload[0] = 0x6a;
@@ -427,13 +427,35 @@ int process_authenticate(uint8_t control, const uint8_t *challenge, const uint8_
     return 2;
   }
 
+  byte data[4];
+  ret = ECCX08.readSlot(DEFAULT_DATA_SLOT, data, sizeof(data));
+  if( !ret ){
+    Serial.println("readSlot error");
+    payload[0] = 0x6a;
+    payload[1] = 0x80;
+    return 2;
+  }
+
+  unsigned long counter = (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3];
+  counter++;
+  data[0] = (counter << 24) & 0xff;
+  data[1] = (counter << 16) & 0xff;
+  data[2] = (counter << 8) & 0xff;
+  data[3] = (counter) & 0xff;
+
+  ret = ECCX08.writeSlot(DEFAULT_DATA_SLOT, data, sizeof(data));
+  if( !ret ){
+    Serial.println("writeSlot error");
+    payload[0] = 0x6a;
+    payload[1] = 0x80;
+    return 2;
+  }
+  
   uint8_t userPresence = 0x01;
 
   unsigned char buffer[APPLICATION_LENGTH + 1 + 4 + CHALLENGE_LENGTH];
   memmove(&buffer[0], application, APPLICATION_LENGTH);
   buffer[APPLICATION_LENGTH] = userPresence;
-// ToDo counter may be count up
-//  counter++;
   buffer[APPLICATION_LENGTH + 1] = (counter >> 24) & 0xff;
   buffer[APPLICATION_LENGTH + 1 + 1] = (counter >> 16) & 0xff;
   buffer[APPLICATION_LENGTH + 1 + 2] = (counter >> 8) & 0xff;
@@ -450,7 +472,7 @@ int process_authenticate(uint8_t control, const uint8_t *challenge, const uint8_
   }
 
   unsigned char signature[RAW_SIGNATURE_LENGTH];
-  ret = ECCX08.ecSign(DEFAULT_SLOT, hash, signature);
+  ret = ECCX08.ecSign(DEFAULT_KEY_SLOT, hash, signature);
   if( !ret ){
     Serial.println("ECCX08.ecSign Error");
     payload[0] = 0x6a;
