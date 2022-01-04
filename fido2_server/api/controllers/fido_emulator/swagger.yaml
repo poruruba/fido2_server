@@ -4,6 +4,21 @@ info:
   title: Lambda Laboratory Server
   
 paths:
+  /device/u2f_certificate:
+    post:
+      x-swagger-router-controller: routing
+      operationId: u2f_certificate
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: "#/definitions/CommonRequest"
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/CommonResponse"
+
   /device/u2f_register:
     post:
       x-swagger-router-controller: routing
