@@ -116,7 +116,8 @@ async function u2f_certificate(pubKey) {
         //サブジェクトキー識別子
         extname: "subjectKeyIdentifier",
         kid: {
-          hex: derSKI.getEncodedHex()
+//          hex: derSKI.getEncodedHex()
+          hex: ski
         }
       },
       {
@@ -159,7 +160,7 @@ async function u2f_register(challenge, application) {
   await writeCertFile(key_id, {
     application: application.toString('hex'),
     privkey: rs.KEYUTIL.getPEM(kp.prvKeyObj, "PKCS1PRV"),
-    counter: 0,
+    counter: 1,
     created_at: new Date().getTime()
   });
 
@@ -186,7 +187,8 @@ async function u2f_register(challenge, application) {
         //サブジェクトキー識別子
         extname: "subjectKeyIdentifier",
         kid: {
-          hex: derSKI.getEncodedHex()
+//          hex: derSKI.getEncodedHex()
+          hex: ski
         }
       },
       {
