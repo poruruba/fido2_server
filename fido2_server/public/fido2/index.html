@@ -1,23 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src * data: gap: https://ssl.gstatic.com 'unsafe-eval' 'unsafe-inline'; style-src * 'unsafe-inline'; media-src *; img-src * data: content: blob:;">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src * data: gap: https://ssl.gstatic.com 'unsafe-eval' 'unsafe-inline'; style-src * 'unsafe-inline'; media-src *; img-src * data: content: blob:;">
   <meta name="format-detection" content="telephone=no">
   <meta name="msapplication-tap-highlight" content="no">
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width">
+  <meta name="viewport"
+    content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width">
 
   <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-  <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha384-nvAa0+6Qg9clwYCGGPpDQLVpLNn0fRaROjHqs13t4Ggj3Ez50XnGQqc/r8MhnRDZ" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js"
+    integrity="sha384-nvAa0+6Qg9clwYCGGPpDQLVpLNn0fRaROjHqs13t4Ggj3Ez50XnGQqc/r8MhnRDZ"
+    crossorigin="anonymous"></script>
   <!-- Latest compiled and minified CSS -->
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+    integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
   <!-- Optional theme -->
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css" integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css"
+    integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
   <!-- Latest compiled and minified JavaScript -->
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"
+    integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd"
+    crossorigin="anonymous"></script>
 
   <link rel="stylesheet" href="css/start.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/spinkit/2.0.1/spinkit.min.css" />
   <script src="js/methods_bootstrap.js"></script>
   <script src="js/components_bootstrap.js"></script>
   <script src="js/components_utils.js"></script>
@@ -33,55 +43,118 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
 
   <script src="dist/js/base64url-arraybuffer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/cbor-js@0.1.0/cbor.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/10.5.26/jsrsasign-all-min.js"></script>
 
   <title>FIDO2 Demo Server</title>
 </head>
-<body>
-    <div id="top" class="container">
-        <h1>FIDO2 Demo Server</h1>
-        
-        <div class="alert alert-info" role="alert">{{message}}</div>
-        
-        <div class="form-inline">
-          <label>username</label> <input type="text" class="form-control" v-model="username">
-        </div>
-        <button class="btn btn-default" v-on:click="start_register()">登録開始</button>
-        
-        <div v-if="attestation != null">
-          <label>rp.name</label> {{attestation.rp.name}}<br>
-          <label>rp.id</label> {{attestation.rp.id}}<br>
-          <label>user.displayName</label> {{attestation.user.displayName}}<br>
-          <label>user.name</label> {{attestation.user.name}}<br>
-          <label>user.id</label> {{attestation_encode.user.id}}<br>
-          <label>challenge</label> {{attestation_encode.challenge}}<br>
-          <label>attestation</label> {{attestation.attestation}}<br>
-        
-          <button class="btn btn-default" v-on:click="do_register()">登録実行</button>
-        </div>
-        <div>
-          <div v-if="registered">
-            <label>credId</label> {{register_credId}}<br>
-            <label>counter</label> {{register_counter}}<br>
-          </div>
-        
-          <button class="btn btn-default" v-on:click="start_login()">ログイン開始</button>
-        </div>
-        <div v-if="assertion != null">
-          <div v-for="(cred, index) of assertion_encode.allowCredentials">
-            <label>cred.id[{{index}}]</label> {{cred.id}}<br>
-          </div>
-          <label>challenge</label> {{assertion_encode.challenge}}<br>
-        
-          <button class="btn btn-default" v-on:click="do_login()">ログイン実行</button>
-        </div>
-        <div v-if="logined">
-          <label>credId</label> {{login_credId}}<br>
-          <label>counter</label> {{login_counter}}<br>
-        </div>
 
-        <!-- for progress-dialog -->
-        <progress-dialog v-bind:title="progress_title"></progress-dialog>
+<body>
+  <!--
+    <div id="loader-background">
+      <div class="sk-plane sk-center"></div>
+    </div>
+-->
+  <div id="top" class="container">
+    <h1>FIDO2 Demo Server</h1>
+
+    <div class="alert alert-info" role="alert">{{message}}</div>
+
+    <div class="form-inline">
+      <label>username</label> <input type="text" class="form-control" v-model="username">
+    </div>
+    <button class="btn btn-default" v-on:click="start_register()">登録開始</button>
+
+    <div v-if="attestation != null">
+      <label>rp.name</label> {{attestation.rp.name}}<br>
+      <label>rp.id</label> {{attestation.rp.id}}<br>
+      <label>user.displayName</label> {{attestation.user.displayName}}<br>
+      <label>user.name</label> {{attestation.user.name}}<br>
+      <label>user.id</label> {{attestation_encode.user.id}}<br>
+      <label>challenge</label> {{attestation_encode.challenge}}<br>
+      <label>attestation</label> {{attestation.attestation}}<br>
+
+      <button class="btn btn-default" v-on:click="do_register()">登録実行</button>
+    </div>
+    <div>
+      <div v-if="registered">
+        <label>credId</label> {{register_credId}}<br>
+        <label>counter</label> {{register_counter}}<br>
+
+        <collapse-panel class="panel-default" title="X509" id="X509" collapse="true">
+          <span slot="content">
+            <div class="panel-body">
+              <label>pubkey.type</label> {{pubkey.type}}<br>
+              <label>pubkey.id</label> {{pubkey.id}}<br>
+              <label>pubkey.rawId</label> {{pubkey.rawId}}<br>
+              <label>clientData.type</label> {{clientData.type}}<br>
+              <label>clientData.origin</label> {{clientData.origin}}<br>
+              <label>clientData.challenge</label> {{clientData.challenge}}<br>
+              <label>attestationObject.fmt</label> {{attestationObject.fmt}}<br>
+              <span v-if="attestationObject.attStmt.sig">
+                <label>attestationObject.attStmt.sig</label>
+                <textarea class="form-control" rows="2">{{ba2hex(attestationObject.attStmt.sig)}}</textarea><br>
+              </span>
+              <span v-for="(item, index) in x5c">
+                <collapse-panel class="panel-default" v-bind:id="'x5c_' + index" v-bind:title="'attestationObject.attStmt.x5c[' + index + ']'" collapse="false">
+                  <span slot="content">
+                    <div class="panel-body">
+                      <label>version</label> {{item.params.version}}<br>
+                      <label>serial</label> {{item.params.serial.hex}}<br>
+                      <label>sigalg</label> {{item.params.sigalg}}<br>
+                      <label>issuer</label> {{item.params.issuer.str}}<br>
+                      <label>notbefore</label> {{item.params.notbefore}}<br>
+                      <label>notafter</label> {{item.params.notafter}}<br>
+                      <label>subject</label> {{item.params.subject.str}}<br>
+                      <label>sbjpubkey</label>
+                      <textarea class="form-control" rows="3">{{item.params.sbjpubkey}}</textarea>
+                      <label>sighex</label>
+                      <textarea class="form-control" rows="2">{{item.params.sighex}}</textarea>
+                      <label>item.ext[]</label>
+                      <ul>
+                        <li v-for="(item2, index2) in item.params.ext">{{JSON.stringify(item2)}}</li>
+                      </ul>
+                    </div>
+                  </span>
+                </collapse-panel>
+              </span>
+            </div>
+          </span>
+        </collapse-panel>
+      </div>
+
+      <button class="btn btn-default" v-on:click="start_login()">ログイン開始</button>
+    </div>
+    <div v-if="assertion != null">
+      <div v-for="(cred, index) of assertion_encode.allowCredentials">
+        <label>cred.id[{{index}}]</label> {{cred.id}}<br>
+      </div>
+      <label>challenge</label> {{assertion_encode.challenge}}<br>
+
+      <button class="btn btn-default" v-on:click="do_login()">ログイン実行</button>
+    </div>
+    <div v-if="logined">
+      <label>credId</label> {{login_credId}}<br>
+      <label>counter</label> {{login_counter}}<br>
+
+      <collapse-panel class="panel-default" title="X509" id="X509_2" collapse="true">
+        <span slot="content">
+          <div class="panel-body">
+            <label>pubkey.type</label> {{pubkey2.type}}<br>
+            <label>pubkey.id</label> {{pubkey2.id}}<br>
+            <label>pubkey.rawId</label> {{pubkey2.rawId}}<br>
+            <label>clientData.type</label> {{clientData2.type}}<br>
+            <label>clientData.origin</label> {{clientData2.origin}}<br>
+          </div>
+        </span>
+      </collapse-panel>
+
     </div>
 
-    <script src="js/start.js"></script>
+
+    <!-- for progress-dialog -->
+    <progress-dialog v-bind:title="progress_title"></progress-dialog>
+  </div>
+
+  <script src="js/start.js"></script>
 </body>
