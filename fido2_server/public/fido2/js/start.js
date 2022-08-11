@@ -24,7 +24,15 @@ var vue_options = {
         },
         login_credId: null,
         login_counter: -1,
-        logined: false
+        logined: false,
+
+        pubkey: {},
+        clientData: {},
+        attestationObject: {},
+        x5c: [],        
+
+        pubkey2: {},
+        clientData2: {},
     },
     computed: {
     },
@@ -61,10 +69,24 @@ var vue_options = {
         do_register: function () {
             return navigator.credentials.create({ publicKey: this.attestation })
                 .then(response => {
-                    var result = publicKeyCredentialToJSON(response);
+                    this.pubkey = publicKeyCredentialToJSON(response);
+                    console.log(this.pubkey);
+
+                    this.clientData = JSON.parse(arrayBufferToStr(response.response.clientDataJSON));
+                    this.attestationObject = CBOR.decode(response.response.attestationObject);
+                    this.x5c = [];
+                    if( this.attestationObject.attStmt.x5c ){
+                        for (var i = 0; i < this.attestationObject.attStmt.x5c.length ; i++ ){
+                            var x509 = new X509();
+                            x509.readCertHex(this.ba2hex(this.attestationObject.attStmt.x5c[i]));
+                            var x509params = x509.getParam();
+                            console.log(x509params);
+                            this.x5c.push({ x509: x509, params: x509params });
+                        }
+                    }
 
                     this.progress_open();
-                    return do_post(base_url + '/attestation/result', result)
+                    return do_post(base_url + '/attestation/result', this.pubkey)
                 })
                 .then((response) => {
                     this.progress_close();
@@ -122,10 +144,16 @@ var vue_options = {
         do_login: function () {
             return navigator.credentials.get({ publicKey: this.assertion })
                 .then(response => {
-                    var result = publicKeyCredentialToJSON(response);
+                    this.pubkey2 = publicKeyCredentialToJSON(response);
+                    console.log(this.pubkey2);
+
+                    this.clientData2 = JSON.parse(arrayBufferToStr(response.response.clientDataJSON));
+                    console.log(this.clientData2);
+//                    this.authenticatorData = CBOR.decode(response.response.authenticatorData);
+//                    console.log(this.authenticatorData);
 
                     this.progress_open();
-                    return do_post(base_url + '/assertion/result', result)
+                    return do_post(base_url + '/assertion/result', this.pubkey2)
                 })
                 .then((response) => {
                     this.progress_close();
@@ -161,23 +189,6 @@ vue_add_global_components(components_utils);
   
 window.vue = new Vue( vue_options );
 
-function do_post(url, body) {
-    //    const headers = new Headers( { "Content-Type" : "application/json; charset=utf-8" } );
-    const headers = new Headers({ "Content-Type": "application/json" });
-
-    return fetch(url, {
-        method: 'POST',
-        credentials: 'include',
-        body: JSON.stringify(body),
-        headers: headers
-    })
-        .then((response) => {
-            if (!response.ok)
-                throw 'status is not 200.';
-            return response.json();
-        });
-}
-
 function publicKeyCredentialToJSON(pubKeyCred) {
     if (pubKeyCred instanceof Array) {
         let arr = [];
@@ -202,4 +213,8 @@ function publicKeyCredentialToJSON(pubKeyCred) {
     }
 
     return pubKeyCred
+}
+
+function arrayBufferToStr(buf) {
+    return String.fromCharCode.apply(null, new Uint8Array(buf));
 }
