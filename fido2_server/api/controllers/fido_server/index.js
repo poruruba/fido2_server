@@ -59,6 +59,7 @@ exports.handler = async (event, context, callback) => {
 
     return new Response(authnOptions);
   }else
+    
   if( event.path == '/assertion/result'){
     var body = JSON.parse(event.body);
     console.log(body);
@@ -98,7 +99,7 @@ exports.handler = async (event, context, callback) => {
       userHandle: user.id
     };
 
-    body.rawId = new Uint8Array(base64url.toBuffer(body.rawId)).buffer;
+    body.rawId = new Uint8Array(base64url.toBuffer(body.id)).buffer;
     if( !body.response.userHandle )
       body.response.userHandle = undefined;
     var authnResult = await f2l.assertionResult(body, assertionExpectations);
@@ -121,6 +122,7 @@ exports.handler = async (event, context, callback) => {
       });
     }
   }else
+    
   if( event.path == '/attestation/options'){
     var body = JSON.parse(event.body);
     console.log(body);
@@ -162,6 +164,7 @@ exports.handler = async (event, context, callback) => {
 
     return new Response(registrationOptions);
   }else
+    
   if( event.path == '/attestation/result'){
     var body = JSON.parse(event.body);
     console.log(body);
@@ -176,7 +179,7 @@ exports.handler = async (event, context, callback) => {
         origin: FIDO_ORIGIN,
         factor: "either"
     };
-    body.rawId = new Uint8Array(base64url.toBuffer(body.rawId)).buffer;
+    body.rawId = new Uint8Array(base64url.toBuffer(body.id)).buffer;
     var regResult = await f2l.attestationResult(body, attestationExpectations);
     console.log(regResult);
 
