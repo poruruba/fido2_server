@@ -99,6 +99,8 @@ exports.handler = async (event, context, callback) => {
     };
 
     body.rawId = new Uint8Array(base64url.toBuffer(body.rawId)).buffer;
+    if( !body.response.userHandle )
+      body.response.userHandle = undefined;
     var authnResult = await f2l.assertionResult(body, assertionExpectations);
     console.log(authnResult);
 
