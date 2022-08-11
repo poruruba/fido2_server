@@ -45,7 +45,7 @@ exports.handler = async (event, context, callback) => {
         allowCredentials.push({
           type: 'public-key',
           id: authr.credId,
-//          transports: ['usb', 'nfc', 'ble']
+//          transports: ['usb', 'nfc', 'ble', 'internal']
         })
     }
     authnOptions.allowCredentials = allowCredentials;
@@ -146,6 +146,11 @@ exports.handler = async (event, context, callback) => {
     registrationOptions.user.id = id;
     registrationOptions.user.name = username;
     registrationOptions.user.displayName = username;
+    // registrationOptions.authenticatorSelection = {
+    //   requireResidentKey: false,
+    //   authenticatorAttachment: "cross-platform", // 'cross-platform', 'platform'
+    //   userVerification: "preferred"
+    // };
     console.log(registrationOptions);
 
     user = {
